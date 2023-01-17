@@ -40,7 +40,7 @@ public:
 
     // this enables drag drop directly onto the .exe, useful if you have a
     // shortcut to the exe somewhere (or the .exe is accessable via the send to menu)
-
+    /*
     HRESULT RegisterAppDropTarget() const;
 
     // create registry entries for drop target based static verb.
@@ -88,7 +88,7 @@ public:
     HRESULT RegisterProgIDValue(PCWSTR pszProgID, PCWSTR pszValueName) const;
     HRESULT RegisterProgIDValue(PCWSTR pszProgID, PCWSTR pszValueName, PCWSTR pszValue) const;
     HRESULT RegisterProgIDValue(PCWSTR pszProgID, PCWSTR pszValueName, DWORD dwValue) const;
-
+    */
     // this should probably be private but they are useful
     HRESULT RegSetKeyValuePrintf(HKEY hkey, PCWSTR pszKeyFormatString, PCWSTR pszValueName, PCWSTR pszValue, ...) const;
     HRESULT RegSetKeyValuePrintf(HKEY hkey, PCWSTR pszKeyFormatString, PCWSTR pszValueName, DWORD dwValue, ...) const;
@@ -105,8 +105,8 @@ public:
 private:
 
     HRESULT _EnsureModule() const;
-    bool _IsBaseClassProgID(PCWSTR pszProgID)  const;
-    HRESULT _EnsureBaseProgIDVerbIsNone(PCWSTR pszProgID) const;
+    //bool _IsBaseClassProgID(PCWSTR pszProgID)  const;
+    //HRESULT _EnsureBaseProgIDVerbIsNone(PCWSTR pszProgID) const;
     void _UpdateAssocChanged(HRESULT hr, PCWSTR pszKeyFormatString) const;
 
     CLSID _clsid;

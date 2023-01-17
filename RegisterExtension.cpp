@@ -232,7 +232,7 @@ HRESULT CRegisterExtension::UnRegisterObject() const
     }
     return hr;
 }
-
+/*
 //
 // pszProtocol values:
 // "*" - all
@@ -695,7 +695,7 @@ HRESULT CRegisterExtension::RegisterAppShortcutInSendTo() const
     }
     return hr;
 }
-
+*/
 HRESULT CRegisterExtension::RegSetKeyValuePrintf(HKEY hkey, PCWSTR pszKeyFormatString, PCWSTR pszValueName, PCWSTR pszValue, ...) const
 {
     va_list argList;

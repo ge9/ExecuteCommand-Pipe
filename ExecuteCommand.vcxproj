@@ -178,6 +178,7 @@
     <ClInclude Include="RegisterExtension.h" />
     <ClInclude Include="ShellHelpers.h" />
     <ClInclude Include="VerbHelpers.h" />
+    <ClInclude Include="myuuid.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
