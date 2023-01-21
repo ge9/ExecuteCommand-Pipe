@@ -28,6 +28,7 @@
 #include <strsafe.h>
 #include <new>  // std::nothrow
 #include <atlbase.h>
+#include <functional>
 #include "myuuid.h"
 // Each ExecuteCommand handler needs to have a unique COM object, run UUIDGEN.EXE to
 // create new CLSID values for your handler. These handlers can implement multiple
@@ -107,15 +108,18 @@ public:
     IFACEMETHODIMP SetNoShowUI(BOOL /* fNoShowUI */)
     { return S_OK; }
 
-    IFACEMETHODIMP SetDirectory(PCWSTR /* pszDirectory */)
-    { return S_OK; }
+    IFACEMETHODIMP SetDirectory(PCWSTR pszDirectory)
+    {
+        wcscpy_s(pszName0, MAX_PATH_CHARS, pszDirectory); 
+        return S_OK; }
 
     IFACEMETHODIMP Execute();
 
     // IObjectWithSelection
     IFACEMETHODIMP SetSelection(IShellItemArray *psia)
     {
-        SetInterface(&_psia, psia);
+        HRESULT hr = SetInterface(&_psia, psia);
+        setSelection_succeeded = SUCCEEDED(hr);
         return S_OK;
     }
 
@@ -149,15 +153,33 @@ public:
 
     void OnAppCallback()
     {
+        WCHAR uuid_wide[50];
+        size_t converted;
+        mbstowcs_s(&converted, uuid_wide, MYUUID, sizeof(MYUUID));
+
+        bool is_debug = pszCmdLine_field[0] == '-' || pszCmdLine_field[0] == 'd';//only "-Embedding" or "d" --> debug
+        if (!setSelection_succeeded) {//directory mode
+            if (is_debug) {
+                MessageBox(NULL, pszName0, uuid_wide, MB_OK | MB_SETFOREGROUND);
+            }
+            else {
+                run_cmd_pipe([this](HANDLE stdIn) {
+                    DWORD written = 0;
+                    WideCharToMultiByte(CP_UTF8, 0, pszName0, -1, mbfile, MAX_PATH_CHARS * 4, NULL, NULL);//to UTF-8
+                    WriteFile(stdIn, mbfile,(DWORD) strlen(mbfile), &written, NULL);
+                    WriteFile(stdIn, L"\n", 1, &written, NULL);//newline
+                });
+            }
+            return;
+        }
         DWORD count;
         _psia->GetCount(&count);
         CComPtr<IShellItem2> psi;
 
         PWSTR pszName = pszName0;
-        const WCHAR LF = '\n';
         //HRESULT hr ;
         //HRESULT hr2;
-        if (pszCmdLine_field[0] == '-' || pszCmdLine_field[0] == 'd') {//only "-Embedding" or "d" --> debug
+        if (is_debug) {
             //debug; show dialog
             GetItemAt(_psia, 0, IID_PPV_ARGS(&psi));//the first item
             psi->GetDisplayName(SIGDN_FILESYSPATH, &pszName);
@@ -167,54 +189,58 @@ public:
             GetItemAt(_psia, count - 1, IID_PPV_ARGS(&psi2));//the last item
             psi2->GetDisplayName(SIGDN_FILESYSPATH, &pszName2);
 
-            WCHAR uuid_wide[50];
-            size_t converted;
-            mbstowcs_s(&converted, uuid_wide, MYUUID, sizeof(MYUUID));
             WCHAR* szMsg = new WCHAR[MAX_PATH_CHARS * 2 + 400];
-            StringCchPrintf(szMsg, MAX_PATH_CHARS * 2 + 400, L"UUID:%s, arg:[%s], %d item(s), first item: [%s], last item: [%s]", uuid_wide, pszCmdLine_field, count, pszName, pszName2);
-            MessageBox(NULL, szMsg, c_szVerbDisplayName, MB_OK | MB_SETFOREGROUND);
+            StringCchPrintf(szMsg, MAX_PATH_CHARS * 2 + 400, L"arg:[%s], %d item(s), first item: [%s], last item: [%s]", pszCmdLine_field, count, pszName, pszName2);
+            MessageBox(NULL, szMsg, uuid_wide, MB_OK | MB_SETFOREGROUND);
             delete[] pszName2;
             delete[] szMsg;
 
         }
         else {//command specified
-            pszCmdLine_field[wcslen(pszCmdLine_field) - 11] = 0;//ignore " -Embedding"
+            run_cmd_pipe([count, this, &pszName, &psi](HANDLE stdIn) {
+                DWORD written = 0;
+                for (DWORD i = 0; i < count; i++) {
+                    GetItemAt(_psia, i, IID_PPV_ARGS(&psi));
+                    psi->GetDisplayName(SIGDN_FILESYSPATH, &pszName);
+                    WideCharToMultiByte(CP_UTF8, 0, pszName, -1, mbfile, MAX_PATH_CHARS * 4, NULL, NULL);//to UTF-8
+                    WriteFile(stdIn, mbfile, (DWORD)strlen(mbfile), &written, NULL);
+                    WriteFile(stdIn, L"\n", 1, &written, NULL);//newline
+                }
+            });
 
-            //create pipe
-            HANDLE hPipe1[2];
-            HANDLE hChildRead;
-            CreatePipe(&hPipe1[0], &hPipe1[1], NULL, 0);
-            DuplicateHandle(GetCurrentProcess(), hPipe1[0], GetCurrentProcess(), &hChildRead, 0, TRUE, DUPLICATE_SAME_ACCESS);
-            CloseHandle(hPipe1[0]);
-
-            //prepare STARTUPINFO
-            STARTUPINFO si;
-            ZeroMemory(&si, sizeof(si));
-            si.cb = sizeof(STARTUPINFO);
-            si.dwFlags = STARTF_USESTDHANDLES;
-            si.hStdInput = hChildRead;
-            si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-            si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-            //if (pszCmdLine_field[0] == 'h') si.wShowWindow = SW_HIDE; // hide window
-
-            PROCESS_INFORMATION pi;
-            ZeroMemory(&pi, sizeof(pi));
-            //ignore first 2 chars & optionally hide window
-            CreateProcess(NULL, &pszCmdLine_field[2], NULL, NULL, TRUE, (pszCmdLine_field[0] == 'h') ? CREATE_NO_WINDOW : 0, NULL, NULL, &si, &pi);
-            CloseHandle(pi.hProcess);
-            CloseHandle(pi.hThread);
-            CloseHandle(hChildRead);
-            //write to stdin
-            DWORD written = 0;
-            for (DWORD i = 0; i < count; i++) {
-                GetItemAt(_psia, i, IID_PPV_ARGS(&psi));
-                psi->GetDisplayName(SIGDN_FILESYSPATH, &pszName);
-                WideCharToMultiByte(CP_UTF8, 0, pszName, -1, mbfile, MAX_PATH_CHARS * 4, NULL, NULL);//to UTF-8
-                WriteFile(hPipe1[1], mbfile, (DWORD)strlen(mbfile), &written, NULL);
-                WriteFile(hPipe1[1], &LF, 1, &written, NULL);//newline
-            }
-            CloseHandle(hPipe1[1]);
         }
+    }
+    void run_cmd_pipe(std::function<void(HANDLE)> writer_func) {
+        pszCmdLine_field[wcslen(pszCmdLine_field) - 11] = 0;//ignore " -Embedding"
+
+        //create pipe
+        HANDLE hPipe1[2];
+        HANDLE hChildRead;
+        CreatePipe(&hPipe1[0], &hPipe1[1], NULL, 0);
+        DuplicateHandle(GetCurrentProcess(), hPipe1[0], GetCurrentProcess(), &hChildRead, 0, TRUE, DUPLICATE_SAME_ACCESS);
+        CloseHandle(hPipe1[0]);
+
+        //prepare STARTUPINFO
+        STARTUPINFO si;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(STARTUPINFO);
+        si.dwFlags = STARTF_USESTDHANDLES;
+        si.hStdInput = hChildRead;
+        si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+        si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+        //if (pszCmdLine_field[0] == 'h') si.wShowWindow = SW_HIDE; // hide window
+
+        PROCESS_INFORMATION pi;
+        ZeroMemory(&pi, sizeof(pi));
+        //ignore first 2 chars & optionally hide window
+        CreateProcess(NULL, &pszCmdLine_field[2], NULL, NULL, TRUE, (pszCmdLine_field[0] == 'h') ? CREATE_NO_WINDOW : 0, NULL, NULL, &si, &pi);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        CloseHandle(hChildRead);
+
+        //write to stdin
+        writer_func(hPipe1[1]);
+        CloseHandle(hPipe1[1]);
     }
 
 private:
@@ -232,6 +258,7 @@ private:
 
     CHAR mbfile[MAX_PATH_CHARS * 4];
     WCHAR pszName0[MAX_PATH_CHARS];
+    bool setSelection_succeeded = false;
 };
 
 // this is called to invoke the verb but this call must not block the caller. to accomidate that
