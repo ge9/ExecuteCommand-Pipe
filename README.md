@@ -32,7 +32,7 @@ The first character is
   - write to file
     - `C:\Users\yourname\ExecuteCommand4000.exe h busybox sh -c "cat > $HOME/out.txt"`
   - run notepad for each file (don't run this for too many files!)
-    - `C:\Users\yourname\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "sed 's/\\\\/\\\\\\\\/g;s/ /\\\\ /g' | xargs -n1 -P0 notepad"`
+    - `C:\Users\yourname\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "xargs -d '\n' -n1 -P0 notepad"`
     - (Git bash seems better in this case; busybox's UTF-8 support seems a bit incomplete)
   - sample registry entry for .txt
     ```
@@ -48,21 +48,21 @@ The first character is
     ```
 - "Directory Background" mode
   - Open VS Code
-    - `C:\Users\yourname\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "sed 's/\\\\/\\\\\\\\/g;s/ /\\\\ /g' | xargs -n1 -P0 /c/Program\\ Files/Microsoft\\ VS\\ Code/Code.exe"`
+    - `C:\Users\yourname\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "cygpath -f - | xargs -d '\n' -I {} /c/Program\\ Files/Git/git-bash.exe -c \"cd \\\"{}\\\";exec bash\""`
   - Open Git Bash
-    - `C:\Users\yourname\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "sed 's/\\\\/\\\\\\\\/g;s/ /\\\\ /g' | xargs cygpath -u | xargs -I {} /c/Program\\ Files/Git/git-bash.exe -c \"cd {};exec bash\""`
+    - `C:\Users\yourname\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "xargs -d '\n' /c/Program\\ Files/Microsoft\\ VS\\ Code/Code.exe"`
   - sample registry entry
-  ```
-  Windows Registry Editor Version 5.00
+    ```
+    Windows Registry Editor Version 5.00
 
-  [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\VSCode]
-  @="MyVSCode"
-  "Icon"="C:\\Program Files\\Microsoft VS Code\\Code.exe"
+    [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\VSCode]
+    @="MyVSCode"
+    "Icon"="C:\\Program Files\\Microsoft VS Code\\Code.exe"
 
-  [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\VSCode\command]
-  "DelegateExecute"="{FFA07888-75BD-471A-B325-59274E734000}"
+    [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\VSCode\command]
+    "DelegateExecute"="{FFA07888-75BD-471A-B325-59274E734000}"
 
-  ```
+    ```
 # Building
 Use Visual Studio or MSBuild.exe. `build.sh` generates multiple exe files with different UUIDs.
 # License
