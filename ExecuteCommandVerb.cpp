@@ -293,6 +293,27 @@ HRESULT CExecuteCommandVerb::Run()
 
 int APIENTRY wWinMain(HINSTANCE, HINSTANCE, PWSTR pszCmdLine, int)
 {
+
+    BOOL runAsAdmin;
+    {//Check if run as admin
+        SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+        PSID AdministratorsGroup;
+
+        runAsAdmin = AllocateAndInitializeSid(
+            &NtAuthority,
+            2,
+            SECURITY_BUILTIN_DOMAIN_RID,
+            DOMAIN_ALIAS_RID_ADMINS,
+            0, 0, 0, 0, 0, 0,
+            &AdministratorsGroup);
+
+        if (runAsAdmin == TRUE)
+        {
+            if (CheckTokenMembership(NULL, AdministratorsGroup, &runAsAdmin) == FALSE) runAsAdmin = FALSE;
+            FreeSid(AdministratorsGroup);
+        }
+    }
+
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if (SUCCEEDED(hr))
     {
@@ -309,7 +330,9 @@ int APIENTRY wWinMain(HINSTANCE, HINSTANCE, PWSTR pszCmdLine, int)
         else
         {
             CRegisterExtension re(__uuidof(CExecuteCommandVerb));
-
+            if (runAsAdmin && IDYES == MessageBoxA(NULL, "Run as administrator. Install for all users (in HKEY_LOCAL_MACHINE) ?", "ExecuteCommand-Pipe", MB_YESNO)) {
+                re.SetInstallScope(HKEY_LOCAL_MACHINE);
+            }
             hr = re.RegisterAppAsLocalServer(c_szVerbDisplayName);
             MessageBoxA(NULL,
                 "Installed ExecuteCommand Verb Sample as UUID:{" MYUUID "}",
