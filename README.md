@@ -28,10 +28,10 @@ The first character is
 ### Examples
 - For a single directory
   - Open Git Bash
-    - `C:\path\to\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "cygpath -f - | xargs -d '\n' -I {} /c/Program\\ Files/Git/git-bash.exe -c \"cd \\\"{}\\\";exec bash\""`
+    - `C:\path\to\ExecuteCommand4000.exe h cmd /c ""C:\Program Files\Git\usr\bin\cygpath" -f - | "C:\Program Files\Git\usr\bin\xargs" -d '\n' -I {} "/c/Program Files/Git/git-bash.exe" -c "cd \"{}\";exec bash""`
     - Useful for extremely long folders
   - Open VS Code
-    - `C:\path\to\ExecuteCommand4000.exe h "C:\Program Files\Git\bin\bash.exe" -c "xargs -d '\n' /c/Program\\ Files/Microsoft\\ VS\\ Code/Code.exe"`
+    - `C:\path\to\ExecuteCommand4000.exe h cmd /c ""C:\Program Files\Git\usr\bin\xargs" -d '\n' "/c/Program Files/Microsoft VS Code/Code.exe""`
 - For multiple files or directories
   - pass arguments to mpv
     - `C:\path\to\ExecuteCommand4000.exe p C:\path\to\mpv\mpv.exe --playlist=-`
