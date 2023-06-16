@@ -30,8 +30,15 @@ The first character is
 ### Examples
 - For a single directory
   - Open Git Bash
-    - `C:\path\to\ExecuteCommand4000.exe h cmd /c ""C:\Program Files\Git\usr\bin\cygpath" -f - | "C:\Program Files\Git\usr\bin\xargs" -d '\n' -I {} "/c/Program Files/Git/git-bash.exe" -c "cd \"{}\";exec bash""`
-    - Useful for extremely long folders
+    - `C:\path\to\ExecuteCommand4000.exe h cmd /c ""C:\Program Files\Git\usr\bin\cygpath" -f - | "C:\Program Files\Git\usr\bin\xargs" -d '\n' -I {} "C:\Program Files\Git\git-bash.exe" -c "cd \"{}\";exec bash""`
+  - Open Git Bash in Windows' default terminal
+    - `C:\path\to\ExecuteCommand4000.exe h cmd /c ""C:\Program Files\Git\usr\bin\cygpath" -f - | "C:\cygwin64\bin\xargs.exe" -d '\n' -I {} cmd /c start "" "C:\Program Files\Git\usr\bin\env.exe" MSYSTEM=MINGW64 "C:\Program Files\Git\usr\bin\bash.exe" --login -i -c "cd \"{}\";exec bash""`
+    - You need cygwin's xargs here because git bash's executables can't pass arguments to cmd.exe. However, you can workaround this by some other method to run something in Windows' default terminal, for example by https://github.com/ge9/win-console-delegator with `cmd /c start "" `.
+  - Open Cygwin bash
+    - `C:\path\to\ExecuteCommand4000.exe h cmd /c ""C:\cygwin64\bin\cygpath" -f - | "C:\Program Files\Git\usr\bin\xargs" -d '\n' -I {} "C:\cygwin64\bin\mintty.exe" -e "C:\cygwin64\bin\bash.exe" --login -i -c "cd \"{}\";exec bash""`
+    - Here you can use cygwin's xargs instead.
+  - Open Cygwin Bash in Windows' default terminal
+    - `C:\path\to\ExecuteCommand4000.exe h cmd /c ""C:\cygwin64\bin\cygpath" -f - | "C:\cygwin64\bin\xargs.exe" -d '\n' -I {} cmd /c start "" C:\cygwin64\bin\bash.exe --login -i -c "cd \"{}\";exec bash""`
   - Open VS Code
     - `C:\path\to\ExecuteCommand4000.exe h "C:\Program Files\Git\usr\bin\xargs" -d '\n' "/c/Program Files/Microsoft VS Code/Code.exe"`
 - For multiple files or directories
@@ -40,10 +47,10 @@ The first character is
       - Currently not successfull if both input files' and batch file's path contain spaces, mainly because recent cygwin made it difficult (maybe impossible) to pass arbitrary string with double quotation `"` (cf. https://cygwin.com/pipermail/cygwin/2020-June/245226.html).  This also applies to the next example.
   - pass files as a string argument, opening in interactive window
     - `C:\path\to\ExecuteCommand4000.exe h "C:\cygwin64\bin\xargs.exe" -d '\n' -- cmd /c start "" cmd /c "C:\path\to\script.bat"`
-      - Git Bash's xargs doesn't work because it fails to pass arguments to cmd.
+      - Git Bash's xargs doesn't work here again.
       - In this case, stdin won't be closed forcefully, so interactive commands (e.g. `pause`) in script.bat will be meaningful.
   - pass to mpv's stdin
-    - `C:\path\to\ExecuteCommand4000.exe p C:\path\to\mpv\mpv.exe --playlist=-`
+    - `C:\path\to\ExecuteCommand4000.exe p C:\path\to\mpv\mpv.exe --player-operation-mode=pseudo-gui --playlist=-`
   - write paths to file
     - `C:\path\to\ExecuteCommand4000.exe h busybox sh -c "cat > $HOME/out.txt"`
   - run a GUI application for each file (don't run this for too many files!) (use cygwin's xargs in recent Windows 11; refer to #3)
