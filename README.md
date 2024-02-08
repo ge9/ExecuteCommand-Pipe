@@ -1,5 +1,5 @@
 # ExecuteCommand-Pipe
-A simple tool to run arbitrary commands with paths (of files or directories) passed from various context menus in Windows Explorer. Paths are encoded in UTF-8, each suffixed by "\n", and then passed to the given command, through standard input/output.
+A simple tool to run arbitrary commands with paths (of files or directories) passed from various context menus in Windows Explorer. Paths can be passed to the commands either as arguments or through stdin/stdout (pipe).
 Implemented with COM (Component Object Model) technology to avoid limitations for path length or number of files.
 
 # Usage
@@ -10,7 +10,7 @@ Simply double-click to run `ExecuteCommandXXXX.exe` with no arguments, and it pr
 - Each released executable `ExecuteCommandXXXX.exe` has CLSID `{FFA07888-75BD-471A-B325-59274E73XXXX}`.
   - Since the CLSID must be determined in compile time and we have no method to pass arguments from outside the CLSID, we need a separate executable file for each command. 
 - When run without admin right, it registers itself in `HKCU\Software\Classes\CLSID\{FFA07888-75BD-471A-B325-59274E73XXXX}`.
-  - The full path of the executable is stored in `HKCU\Software\Classes\CLSID\{FFA07888-75BD-471A-B325-59274E73XXXX}\LocalServer32`.
+  - The full path of the executable is stored in the default value of `HKCU\Software\Classes\CLSID\{FFA07888-75BD-471A-B325-59274E73XXXX}\LocalServer32`.
 - When run with admin right, it asks if it should use `HKLM` instead of `HKCU`.
   - But user-specific `HKCU` will be safer than system-wide `HKLM`.
   - If you use `HKLM`, you should not place the executable file inside `C:\Users\username`.
@@ -19,14 +19,14 @@ Simply double-click to run `ExecuteCommandXXXX.exe` with no arguments, and it pr
   - You can edit things in `HKCR`, but you should be aware which of `HKCU` or `HKLM` they come from.
 - If you move the executable file, you should update the path in registry.
 ## Modify the argument
-Once the CLSID is registered, you can append any argument to the default value of `[HKCU or HKLM]\Software\Classes\CLSID\{FFA07888-75BD-471A-B325-59274E73XXXX}`, according to your purpose (see examples below).
+Once the CLSID is registered, you can append any argument to the executable path in `[HKCU or HKLM]\Software\Classes\CLSID\{FFA07888-75BD-471A-B325-59274E73XXXX}\LocalServer32`, according to your purpose (see examples below).
 
-After the modification, rename "LocalServer32" to any other name and then return it back (this seems the easiest way to reset the cache and apply the change).
+After the modification, rename the "LocalServer32" to any other name and then return it back (this seems the easiest way to reset some cache and apply the change).
 ### Available Options for ExecuteCommandXXXX.exe
-The first character is
-- 'd' or '-' ... for debugging; show the first and last files given and exit (execution through LocalServer32 automatically add "-Embedding" argument, so appending no argument also result in this debug mode).
-- 'p' (or other characters) ... it runs the given command (the first 2 characters are ignored).
-- 'h' ... similar to 'p', but hide the console window.
+- beginning with `d` or `-` ... for debugging; show the first and last files given and exit (execution through LocalServer32 automatically add "-Embedding" argument, so appending no argument also result in this debug mode).
+- `a xxxx commandline` ... runs the given `commandline`, replacing "xxxx" with the list of quoted paths. `xxxx` can be any string that don't include space. `xxxx` can appear any times in `commandline`. Note that Windows has 32767 character command line length limit. if `xxxx` begins with the character `h`, the console window will be hidden.
+- `p commandline` (or other characters) ... runs the given command, passing paths through pipe.  "\n" is appended to each path (including the last one).
+- `h commandline` ... similar to `p`, but the console window will be hidden.
 ### Examples
 - For a single directory
   - Open Git Bash
@@ -45,10 +45,11 @@ The first character is
   - pass files as a string argument (with xargs)
     - `C:\path\to\ExecuteCommand4000.exe h "C:\Program Files\Git\usr\bin\xargs.exe" -d '\n' -- "C:\path\to\script.bat"`
       - Currently not successfull if both input files' and batch file's path contain spaces, mainly because recent cygwin made it difficult (maybe impossible) to pass arbitrary string with double quotation `"` (cf. https://cygwin.com/pipermail/cygwin/2020-June/245226.html).  This also applies to the next example.
-  - pass files as a string argument, opening in interactive window
-    - `C:\path\to\ExecuteCommand4000.exe h "C:\cygwin64\bin\xargs.exe" -d '\n' -- cmd /c start "" cmd /c "C:\path\to\script.bat"`
-      - If you use Git Bash's xargs, you need extra slashes like the previous example.
-      - In this case, stdin won't be closed forcefully, so interactive commands (e.g. `pause`) in script.bat will be meaningful.
+  - pass files as a string argument, opening interactive window
+    - `C:\path\to\ExecuteCommand4000.exe a xxx "C:\path\to\script.bat" xxx`
+      - `script.bat` may contain interactive commands (like `pause`)
+      - If you use pipe, you need some other command to keep alive the desired program after EOF input.
+        - `C:\path\to\ExecuteCommand4000.exe h "C:\cygwin64\bin\xargs.exe" -d '\n' -- cmd /c start "" cmd /c "C:\path\to\script.bat"`
   - pass to mpv's stdin
     - `C:\path\to\ExecuteCommand4000.exe p C:\path\to\mpv\mpv.exe --player-operation-mode=pseudo-gui --playlist=-`
   - write paths to file

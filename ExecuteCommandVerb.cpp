@@ -30,6 +30,8 @@
 #include <atlbase.h>
 #include <functional>
 #include "myuuid.h"
+#include <string>
+
 // Each ExecuteCommand handler needs to have a unique COM object, run UUIDGEN.EXE to
 // create new CLSID values for your handler. These handlers can implement multiple
 // different verbs using the information provided via IInitializeCommand, for example the verb name.
@@ -197,6 +199,46 @@ public:
 
         }
         else {//command specified
+            pszCmdLine_field[wcslen(pszCmdLine_field) - 11] = 0;//ignore " -Embedding"
+
+            if (pszCmdLine_field[0] == 'a') {//"ExecuteCommand.exe a xxxxx somecommand -some-arg xxxxx
+                std::wstring args=L"";
+                for (DWORD i = 0; i < count; i++) {
+                    GetItemAt(_psia, i, IID_PPV_ARGS(&psi));
+                    psi->GetDisplayName(SIGDN_FILESYSPATH, &pszName);
+                    args = args+L"\"" + pszName + L"\" ";
+                }
+                args.pop_back();//remove the trailing space
+                auto arglen = args.length();
+                std::wstring ws = pszCmdLine_field+2;//remove "a " at the beginning
+
+                size_t pos = ws.find(L' ');
+                if (pos == std::wstring::npos) return;
+
+                std::wstring x = ws.substr(0, pos);//xxxxx
+                ws.erase(0, pos + 1); //remove "xxxxx " at the beginning
+
+                //replace all "xxxxx"s in ws
+                std::wstring::size_type i = 0;
+                while (1) {
+                    i = ws.find(x, i);
+                    if (i == std::wstring::npos) break;
+                    ws.replace(i, x.size(), args);
+                    i += arglen;
+                }
+                WCHAR* wchar = new WCHAR[ws.size() + 1]; // +1 for the null-terminator
+                std::copy(ws.begin(), ws.end(), wchar);
+                wchar[ws.size()] = L'\0';
+
+                STARTUPINFO si = { sizeof(STARTUPINFO) };
+                PROCESS_INFORMATION pi;
+                si.dwFlags = STARTF_USESHOWWINDOW;
+                si.wShowWindow = TRUE;
+                CreateProcess(NULL, wchar, NULL, NULL, FALSE, (x[0] == L'h') ? CREATE_NO_WINDOW : 0, NULL, NULL, &si, &pi);
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+                return;
+            }
             run_cmd_pipe([count, this, &pszName, &psi](HANDLE stdIn) {
                 DWORD written = 0;
                 for (DWORD i = 0; i < count; i++) {
@@ -211,7 +253,6 @@ public:
         }
     }
     void run_cmd_pipe(std::function<void(HANDLE)> writer_func) {
-        pszCmdLine_field[wcslen(pszCmdLine_field) - 11] = 0;//ignore " -Embedding"
 
         //create pipe
         HANDLE hPipe1[2];
@@ -233,7 +274,7 @@ public:
         PROCESS_INFORMATION pi;
         ZeroMemory(&pi, sizeof(pi));
         //ignore first 2 chars & optionally hide window
-        CreateProcess(NULL, &pszCmdLine_field[2], NULL, NULL, TRUE, (pszCmdLine_field[0] == 'h') ? CREATE_NO_WINDOW : 0, NULL, NULL, &si, &pi);
+        CreateProcess(NULL, &pszCmdLine_field[2], NULL, NULL, TRUE, (pszCmdLine_field[0] == L'h') ? CREATE_NO_WINDOW : 0, NULL, NULL, &si, &pi);
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
         CloseHandle(hChildRead);
