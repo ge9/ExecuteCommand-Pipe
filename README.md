@@ -4,6 +4,14 @@ Implemented with COM (Component Object Model) technology to avoid limitations fo
 
 # Usage
 
+## (If you use Windows 11 and don't want to press Shift or click "Show More Options" everytime) Revert to old context menu
+
+Run this command in cmd.exe or Win+R dialog and restart explorer.exe.
+
+```
+reg add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32 /f /ve"
+```
+
 ## Register as a class
 
 Simply double-click to run `ExecuteCommandXXXX.exe` with no arguments, and it properly registers itself in the registry.
@@ -24,9 +32,9 @@ Once the CLSID is registered, you can append any argument to the executable path
 After the modification, rename the "LocalServer32" to any other name and then return it back (this seems the easiest way to reset some cache and apply the change).
 ### Available Options for ExecuteCommandXXXX.exe
 - beginning with `d` or `-` ... for debugging; show the first and last files given and exit (execution through LocalServer32 automatically add "-Embedding" argument, so appending no argument also result in this debug mode).
-- `a xxxx commandline` ... runs the given `commandline`, replacing "xxxx" with the list of quoted paths. `xxxx` can be any string that don't include space. `xxxx` can appear any times in `commandline`. Note that Windows has 32767 character command line length limit. if `xxxx` begins with the character `h`, the console window will be hidden.
-- `p commandline` (or other characters) ... runs the given command, passing paths through pipe.  "\n" is appended to each path (including the last one).
-- `h commandline` ... similar to `p`, but the console window will be hidden.
+- `a xxxx commandline` ... <u>A</u>rgument mode (newly added). Runs the given `commandline`, replacing "xxxx" with the list of quoted paths. `xxxx` can be any string that don't include space. `xxxx` can appear any times in `commandline`. Note that Windows has 32767 character command line length limit. if `xxxx` begins with the character `h`, the console window will be hidden.
+- `p commandline` (or other characters) ... <u>P</u>ipe mode. Runs the given command, passing paths through pipe.  "\n" is appended to each path (including the last one).
+- `h commandline` ... <u>H</u>idden mode. Similar to `p`, but the console window will be hidden.
 ### Examples
 - For a single directory
   - Open Git Bash
@@ -94,5 +102,5 @@ At least the following registry keys work. Tested in Windows 11.
 # Building
 Use Visual Studio or MSBuild.exe. `build.sh` generates multiple exe files with different UUIDs.
 # License
-- MIT (derived from [the original Microsoft sample](https://github.com/microsoft/Windows-classic-samples/tree/main/Samples/Win7Samples/winui/shell/appshellintegration/ExecuteCommandVerb))
+- MIT (inherited from [the original Microsoft sample](https://github.com/microsoft/Windows-classic-samples/tree/main/Samples/Win7Samples/winui/shell/appshellintegration/ExecuteCommandVerb))
 - public domain for my revision
